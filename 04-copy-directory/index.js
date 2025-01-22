@@ -1,9 +1,31 @@
 const fs = require('fs').promises;
 const path = require('path');
 
+async function deleteAbsentFromDest(src, dest) {
+  const destEntries = await fs.readdir(dest, { withFileTypes: true });
+
+  for (const entry of destEntries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    try {
+      await fs.access(srcPath);
+    } catch {
+      if (entry.isDirectory()) {
+        await fs.rmdir(destPath, { recursive: true });
+      } else {
+        await fs.unlink(destPath);
+      }
+    }
+  }
+}
+
 async function copyDirectory(src, dest) {
   // Create the destination directory if it doesn't exist
   await fs.mkdir(dest, { recursive: true });
+
+  // Clean the destination directory of any files/directories not in source
+  await deleteAbsentFromDest(src, dest);
 
   // Read the contents of the source directory
   const entries = await fs.readdir(src, { withFileTypes: true });
